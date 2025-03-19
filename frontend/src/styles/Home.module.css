@@ -1,0 +1,88 @@
+.container {
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  
+  .text {
+    color: #7f8c8d;
+    font-size: 1.2rem;
+  }
+  
+  /* Formulaire */
+  .formContainer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .formContainer input,
+  .formContainer select,
+  .formContainer button {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+  }
+  
+  .formContainer button {
+    background-color: #2ecc71;
+    color: white;
+    cursor: pointer;
+    border: none;
+  }
+  
+  .formContainer button:hover {
+    background-color: #27ae60;
+  }
+  
+  /* Section des statistiques */
+  .statsSection {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 40px;
+  }
+  
+  .balanceCard {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .positiveBalance {
+    color: green;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  
+  .negativeBalance {
+    color: red;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  .resetButton {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin-left: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .resetButton:hover {
+    background-color: #c82333;
+  }
+  
