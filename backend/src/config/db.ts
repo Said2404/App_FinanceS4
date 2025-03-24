@@ -21,7 +21,6 @@ const db = mysql.createPool({
   ssl: undefined 
 });
 
-// Vérifier la connexion MySQL
 db.getConnection((err, connection) => {
   if (err) {
     console.error("❌ Erreur de connexion à MySQL :", err.message);

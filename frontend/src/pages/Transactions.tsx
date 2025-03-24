@@ -13,7 +13,10 @@ interface Transaction {
 
 const Transactions: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"tous" | "dépense" | "revenu">("tous");
 
   useEffect(() => {
     const utilisateurId = localStorage.getItem("utilisateurId");
@@ -25,44 +28,58 @@ const Transactions: React.FC = () => {
 
     axios
       .get(`http://localhost:5001/api/transactions?utilisateurId=${utilisateurId}`)
-      .then((res) => setTransactions(res.data))
+      .then((res) => {
+        setTransactions(res.data);
+        setFilteredTransactions(res.data); // Initialiser le filtre avec toutes les transactions
+      })
       .catch((err) => console.error("❌ Erreur API:", err));
   }, []);
 
-  // ✅ Fonction qui gère la sélection des transactions indépendamment
-  const toggleSelection = (transactionId: number) => {
-    setSelectedTransactions((prevSelected) => {
-      if (prevSelected.includes(transactionId)) {
-        return prevSelected.filter((tid) => tid !== transactionId);
-      } else {
-        return [...prevSelected, transactionId];
-      }
+  useEffect(() => {
+    const lowerSearch = searchTerm.toLowerCase();
+    const filtered = transactions.filter((t) => {
+      const matchType =
+        filterType === "tous" ||
+        t.type.toLowerCase() === filterType;
+
+      const matchSearch =
+        t.categorie.toLowerCase().includes(lowerSearch) ||
+        t.description.toLowerCase().includes(lowerSearch);
+
+      return matchType && matchSearch;
     });
+
+    setFilteredTransactions(filtered);
+  }, [searchTerm, filterType, transactions]);
+
+  const toggleSelection = (transactionId: number) => {
+    setSelectedTransactions((prevSelected) =>
+      prevSelected.includes(transactionId)
+        ? prevSelected.filter((tid) => tid !== transactionId)
+        : [...prevSelected, transactionId]
+    );
   };
 
-  // ✅ Fonction qui supprime les transactions sélectionnées
   const deleteSelectedTransactions = async () => {
     if (selectedTransactions.length === 0) {
       alert("⚠️ Aucune transaction sélectionnée !");
       return;
     }
 
-    const confirmation = window.confirm("⚠️ Voulez-vous vraiment supprimer les transactions sélectionnées ?");
+    const confirmation = window.confirm("⚠️ Supprimer les transactions sélectionnées ?");
     if (!confirmation) return;
 
     try {
-      console.log("🗑️ Suppression des transactions avec transactionId :", selectedTransactions);
-
       await axios.post("http://localhost:5001/api/transactions/delete-multiple", {
-        ids: selectedTransactions.filter(id => id !== null), 
+        ids: selectedTransactions,
       });
 
-      setTransactions((prev) => prev.filter((t) => !selectedTransactions.includes(t.transactionId)));
-      setSelectedTransactions([]); 
-      alert("✅ Transactions supprimées !");
+      const updated = transactions.filter((t) => !selectedTransactions.includes(t.transactionId));
+      setTransactions(updated);
+      setSelectedTransactions([]);
     } catch (error) {
-      console.error("❌ Erreur lors de la suppression :", error);
-      alert("❌ Erreur lors de la suppression des transactions !");
+      console.error("❌ Erreur suppression :", error);
+      alert("Erreur lors de la suppression !");
     }
   };
 
@@ -70,15 +87,25 @@ const Transactions: React.FC = () => {
     <div className={styles.container}>
       <h2 className={styles.title}>📊 Transactions</h2>
 
-      {/* ✅ Bouton de suppression avec désactivation si aucune sélection */}
-      <button className={styles.deleteButton} onClick={deleteSelectedTransactions} disabled={selectedTransactions.length === 0}>
-        🗑️ Supprimer sélection
-      </button>
+      {/* 🔍 Zone de filtre */}
+      <div className={styles.filterBar}>
+        <input
+          type="text"
+          placeholder="🔎 Rechercher..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)}>
+          <option value="tous">Tous</option>
+          <option value="dépense">Dépenses</option>
+          <option value="revenu">Revenus</option>
+        </select>
+      </div>
 
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>✔️</th> 
+            <th>✔️</th>
             <th>Montant</th>
             <th>Catégorie</th>
             <th>Type</th>
@@ -87,7 +114,7 @@ const Transactions: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {transactions.map((t) => (
+          {filteredTransactions.map((t) => (
             <tr key={t.transactionId} className={t.type.toLowerCase() === "dépense" ? styles.expense : styles.revenue}>
               <td>
                 <input
@@ -107,6 +134,14 @@ const Transactions: React.FC = () => {
           ))}
         </tbody>
       </table>
+
+      <button
+        className={styles.deleteButton}
+        onClick={deleteSelectedTransactions}
+        disabled={selectedTransactions.length === 0}
+      >
+        🗑️ Supprimer sélection
+      </button>
     </div>
   );
 };

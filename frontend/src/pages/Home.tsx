@@ -4,7 +4,6 @@ import StatsChart from "../components/StatsChart";
 import styles from "../styles/Home.module.css";
 import { assignCategoryColor, getCategoryColors } from "../utils/CategoryColors";
 
-// Définition des types
 interface Transaction {
   id?: number;
   montant: number;
@@ -12,6 +11,7 @@ interface Transaction {
   type: "dépense" | "revenue";
   description: string;
   color?: string;
+  date?: string;
 }
 
 const Home: React.FC = () => {
@@ -23,53 +23,46 @@ const Home: React.FC = () => {
   const [description, setDescription] = useState("");
   const [categoryColors, setCategoryColors] = useState<{ [key: string]: string }>(getCategoryColors());
 
-  // Charger les transactions depuis le backend au démarrage
   useEffect(() => {
     fetchTransactions();
   }, []);
 
   const fetchTransactions = async () => {
     const utilisateurId = localStorage.getItem("utilisateurId");
-  
+
     if (!utilisateurId) {
       console.error("❌ Aucun utilisateur connecté !");
       return;
     }
-  
+
     try {
       const response = await axios.get(`http://localhost:5001/api/transactions?utilisateurId=${utilisateurId}`);
       const transactions = response.data;
-  
+
       setDepenses(transactions.filter((t: any) => t.type.toLowerCase() === "dépense"));
       setRevenues(transactions.filter((t: any) => t.type.toLowerCase() === "revenu"));
-      
     } catch (error) {
       console.error("❌ Erreur lors de la récupération des transactions :", error);
     }
   };
-  
-
-  
-  
 
   const addTransaction = async () => {
     if (!montant || !categorie) {
       console.error("❌ Montant ou catégorie manquant !");
       return;
     }
-  
-    // Récupérer l'ID utilisateur depuis le localStorage
+
     const utilisateurId = localStorage.getItem("utilisateurId");
-  
+
     if (!utilisateurId) {
       console.error("❌ Aucun utilisateur connecté !");
       alert("Vous devez être connecté pour ajouter une transaction !");
-      return; // ❌ Bloque la création de la transaction
+      return;
     }
-  
+
     const normalizedCategory = categorie.toLowerCase().trim();
     const assignedColor = assignCategoryColor(normalizedCategory);
-  
+
     const transactionData = {
       utilisateurId: Number(utilisateurId),
       montant: parseFloat(montant),
@@ -78,9 +71,9 @@ const Home: React.FC = () => {
       description: description || "N/A",
       color: assignedColor,
     };
-  
+
     console.log("📩 Données envoyées :", transactionData);
-  
+
     try {
       await axios.post("http://localhost:5001/api/transactions", transactionData);
       fetchTransactions();
@@ -91,17 +84,14 @@ const Home: React.FC = () => {
       console.error("❌ Erreur lors de l'envoi de la transaction :", error);
     }
   };
-  
-  
-  
 
   const resetAll = async () => {
     const confirmation = window.confirm("⚠️ Voulez-vous vraiment réinitialiser toutes les transactions ? Cette action est irréversible.");
-    
+
     if (!confirmation) {
-      return; // Annule la suppression si l'utilisateur clique sur "Annuler"
+      return;
     }
-  
+
     try {
       await axios.delete("http://localhost:5001/api/transactions");
       setDepenses([]);
@@ -113,12 +103,22 @@ const Home: React.FC = () => {
       console.error("❌ Erreur lors de la réinitialisation :", error);
     }
   };
-  
-  
 
   const totaldépenses = dépenses.reduce((sum, e) => sum + (Number(e.montant) || 0), 0);
   const totalRevenues = revenues.reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
   const balance = totalRevenues - totaldépenses;
+
+  const maintenant = new Date();
+  const ilYATrentJours = new Date();
+  ilYATrentJours.setDate(maintenant.getDate() - 30);
+
+  const depensesRecentes = dépenses.filter(
+    (d) => new Date(d.date!) >= ilYATrentJours
+  );
+
+  const revenusRecents = revenues.filter(
+    (r) => new Date(r.date!) >= ilYATrentJours
+  );
 
   return (
     <div className={styles.container}>
@@ -148,8 +148,7 @@ const Home: React.FC = () => {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>
-          <option value="dépense">Dépense</option>
+        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>\n          <option value="dépense">Dépense</option>
           <option value="revenue">Revenu</option>
         </select>
         <button onClick={addTransaction}>Ajouter</button>
@@ -159,7 +158,7 @@ const Home: React.FC = () => {
       <div className={styles.statsSection}>
         <StatsChart
           title="Dépenses"
-          data={dépenses.map(e => ({
+          data={depensesRecentes.map(e => ({
             label: e.description,
             value: e.montant,
             color: categoryColors[e.categorie] || "#CCCCCC",
@@ -173,7 +172,7 @@ const Home: React.FC = () => {
         </div>
         <StatsChart
           title="Revenus"
-          data={revenues.map(r => ({
+          data={revenusRecents.map(r => ({
             label: r.description,
             value: r.montant,
             color: categoryColors[r.categorie] || "#CCCCCC",

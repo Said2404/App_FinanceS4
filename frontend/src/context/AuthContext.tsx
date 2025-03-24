@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-// Définition du type des données utilisateur
 interface User {
   utilisateurId: number;
   email: string;
   nom: string;
+  prenom: string;
+  objectif:string;
 }
 
 interface AuthContextType {
@@ -46,7 +47,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// ✅ Hook personnalisé pour utiliser le contexte
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

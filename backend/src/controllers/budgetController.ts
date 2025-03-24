@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import db from "../config/db";
 import dayjs from "dayjs";
 
-// ✅ Ajouter un budget
 export const setBudget = async (req: Request, res: Response): Promise<void> => {
   const { utilisateurId, montant } = req.body;
 
@@ -33,7 +32,6 @@ export const setBudget = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// ✅ Récupérer le budget actuel de l'utilisateur
 export const getBudget = async (req: Request, res: Response): Promise<void> => {
   const utilisateurId = Number(req.query.utilisateurId);
 
@@ -71,7 +69,6 @@ export const getBudget = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// ✅ Réinitialiser le budget
 export const resetBudget = async (req: Request, res: Response): Promise<void> => {
   const { utilisateurId } = req.body;
 
@@ -94,7 +91,6 @@ export const resetBudget = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-// ✅ Augmenter le budget
 export const increaseBudget = async (req: Request, res: Response): Promise<void> => {
   const { utilisateurId, montant } = req.body;
 

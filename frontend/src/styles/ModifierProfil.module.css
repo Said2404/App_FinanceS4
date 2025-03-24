@@ -1,0 +1,81 @@
+.container {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 40px auto;
+    text-align: center;
+  }
+  
+  .title {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 30px;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .formGroup {
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  
+  .formGroup label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #2c3e50;
+  }
+  
+  .formGroup input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  
+  .formGroup input:focus {
+    border-color: #3498db;
+  }
+  
+  .saveButton {
+    background-color: #2980b9;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .saveButton:hover {
+    background-color: #2471a3;
+  }
+  .formGroup select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  
+  .formGroup select:focus {
+    border-color: #3498db;
+  }
+  

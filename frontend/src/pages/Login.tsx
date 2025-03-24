@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext"; // ✅ Ajout du contexte Auth
+import { useAuth } from "../context/AuthContext"; 
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState(""); // ✅ Un seul état pour l'erreur
-  const auth = useAuth(); // ✅ Ajout du contexte Auth
+  const [errorMessage, setErrorMessage] = useState(""); 
+  const auth = useAuth(); 
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -20,12 +20,14 @@ const Login: React.FC = () => {
       console.log("✅ Connexion réussie :", response.data);
   
       const userData = {
-        utilisateurId: response.data.utilisateurId, // ✅ Récupération de l'ID
+        utilisateurId: response.data.utilisateurId, 
         email: response.data.email,
-        nom: response.data.nom, // ✅ Utiliser le vrai nom de l'utilisateur
+        nom: response.data.nom,
+        prenom: response.data.prenom, 
+  objectif: response.data.objectif,
       };
   
-      auth.login(userData); // ✅ Mettre à jour le contexte avec le vrai nom
+      auth.login(userData); 
       navigate("/");
     } catch (error) {
       console.error("❌ Erreur lors de la connexion :", error);
@@ -45,7 +47,7 @@ const Login: React.FC = () => {
         <div>
           <label>Mot de passe</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>} {/* ✅ Message d'erreur unique */}
+          {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>} {/*  Message d'erreur unique */}
         </div>
         <button type="submit">Se connecter</button>
       </form>

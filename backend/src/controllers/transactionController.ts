@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import db from "../config/db";
 
-// ✅ Récupération des transactions d'un utilisateur
 export const getTransactions = async (req: Request, res: Response) => {
   const utilisateurId = Number(req.query.utilisateurId); 
 
@@ -23,7 +22,6 @@ export const getTransactions = async (req: Request, res: Response) => {
   }
 };
 
-// ✅ Ajout d'une transaction
 export const addTransaction = async (req: Request, res: Response): Promise<void> => {
   console.log("📩 Données reçues par le backend :", req.body);
 
@@ -50,7 +48,6 @@ export const addTransaction = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// ✅ Suppression de plusieurs transactions
 export const deleteTransactions = async (req: Request, res: Response) => {
   const { ids } = req.body;
 
@@ -70,7 +67,6 @@ export const deleteTransactions = async (req: Request, res: Response) => {
   }
 };
 
-// ✅ Suppression de toutes les transactions
 export const resetTransactions = async (req: Request, res: Response) => {
   try {
     await db.query("DELETE FROM transactions");

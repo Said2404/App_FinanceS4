@@ -3,7 +3,6 @@ import { addTransaction, getTransactions, resetTransactions, deleteTransactions 
 
 const router = express.Router();
 
-// ✅ Route pour récupérer uniquement les transactions de l'utilisateur connecté
 router.get("/", (req, res) => {
   getTransactions(req, res).catch((err) => {
     console.error("❌ Erreur lors de la récupération des transactions :", err);
@@ -11,7 +10,6 @@ router.get("/", (req, res) => {
   });
 });
 
-// ✅ Route pour ajouter une transaction
 router.post("/", (req, res) => {
   addTransaction(req, res).catch((err) => {
     console.error("❌ Erreur lors de l'ajout d'une transaction :", err);
@@ -19,7 +17,6 @@ router.post("/", (req, res) => {
   });
 });
 
-// ✅ Route pour supprimer toutes les transactions
 router.delete("/", (req, res) => {
   resetTransactions(req, res).catch((err) => {
     console.error("❌ Erreur lors de la suppression des transactions :", err);
@@ -27,7 +24,6 @@ router.delete("/", (req, res) => {
   });
 });
 
-// ✅ Route pour supprimer plusieurs transactions sélectionnées
 router.post("/delete-multiple", (req, res) => {
   deleteTransactions(req, res).catch((err) => {
     console.error("❌ Erreur lors de la suppression des transactions sélectionnées :", err);
