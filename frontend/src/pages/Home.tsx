@@ -3,6 +3,8 @@ import axios from "axios";
 import StatsChart from "../components/StatsChart";
 import styles from "../styles/Home.module.css";
 import { assignCategoryColor, getCategoryColors } from "../utils/CategoryColors";
+import { useNavigate } from "react-router-dom";
+import budgetSubject from "../observers/BudgetSubject"; 
 
 interface Transaction {
   id?: number;
@@ -22,9 +24,17 @@ const Home: React.FC = () => {
   const [type, setType] = useState<"dépense" | "revenue">("dépense");
   const [description, setDescription] = useState("");
   const [categoryColors, setCategoryColors] = useState<{ [key: string]: string }>(getCategoryColors());
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [showPopup, setShowPopup] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTransactions();
+
+    const observer = () => setShowPopup(true);
+    budgetSubject.register(observer);
+
+    return () => budgetSubject.unregister(observer);
   }, []);
 
   const fetchTransactions = async () => {
@@ -39,24 +49,46 @@ const Home: React.FC = () => {
       const response = await axios.get(`http://localhost:5001/api/transactions?utilisateurId=${utilisateurId}`);
       const transactions = response.data;
 
-      setDepenses(transactions.filter((t: any) => t.type.toLowerCase() === "dépense"));
-      setRevenues(transactions.filter((t: any) => t.type.toLowerCase() === "revenu"));
+      const depenses = transactions.filter((t: any) => t.type.toLowerCase() === "dépense");
+      const revenues = transactions.filter((t: any) => t.type.toLowerCase() === "revenu");
+
+      setDepenses(depenses);
+      setRevenues(revenues);
+
+      const total = depenses.reduce((sum: number, t: any) => sum + Number(t.montant), 0);
+      fetchBudgetAndNotify(total);
     } catch (error) {
       console.error("❌ Erreur lors de la récupération des transactions :", error);
     }
   };
 
-  const addTransaction = async () => {
-    if (!montant || !categorie) {
-      console.error("❌ Montant ou catégorie manquant !");
-      return;
+  const fetchBudgetAndNotify = async (totalDepenses: number) => {
+    const utilisateurId = localStorage.getItem("utilisateurId");
+    if (!utilisateurId) return;
+
+    try {
+      const response = await axios.get(`http://localhost:5001/api/budget?utilisateurId=${utilisateurId}`);
+      const budget = response.data.montant;
+      budgetSubject.setBudgetInfo(budget, totalDepenses);
+    } catch (error) {
+      console.error("❌ Erreur récupération budget :", error);
     }
+  };
+
+  const addTransaction = async () => {
+    const errors: { [key: string]: string } = {};
+    if (!montant) errors.montant = "❌ Le montant est requis";
+    if (!categorie) errors.categorie = "❌ La catégorie est requise";
+    if (!type) errors.type = "❌ Le type est requis";
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     const utilisateurId = localStorage.getItem("utilisateurId");
 
     if (!utilisateurId) {
       console.error("❌ Aucun utilisateur connecté !");
-      alert("Vous devez être connecté pour ajouter une transaction !");
+      navigate("/connexion"); 
       return;
     }
 
@@ -80,6 +112,7 @@ const Home: React.FC = () => {
       setMontant("");
       setCategorie("");
       setDescription("");
+      setFormErrors({});
     } catch (error) {
       console.error("❌ Erreur lors de l'envoi de la transaction :", error);
     }
@@ -88,9 +121,7 @@ const Home: React.FC = () => {
   const resetAll = async () => {
     const confirmation = window.confirm("⚠️ Voulez-vous vraiment réinitialiser toutes les transactions ? Cette action est irréversible.");
 
-    if (!confirmation) {
-      return;
-    }
+    if (!confirmation) return;
 
     try {
       await axios.delete("http://localhost:5001/api/transactions");
@@ -112,16 +143,18 @@ const Home: React.FC = () => {
   const ilYATrentJours = new Date();
   ilYATrentJours.setDate(maintenant.getDate() - 30);
 
-  const depensesRecentes = dépenses.filter(
-    (d) => new Date(d.date!) >= ilYATrentJours
-  );
-
-  const revenusRecents = revenues.filter(
-    (r) => new Date(r.date!) >= ilYATrentJours
-  );
+  const depensesRecentes = dépenses.filter((d) => new Date(d.date!) >= ilYATrentJours);
+  const revenusRecents = revenues.filter((r) => new Date(r.date!) >= ilYATrentJours);
 
   return (
     <div className={styles.container}>
+      {showPopup && (
+        <div className={styles.popupNotification}>
+          ⚠️ Vous avez dépassé 75% de votre budget !
+          <button onClick={() => setShowPopup(false)}>Fermer</button>
+        </div>
+      )}
+
       <h1 className={styles.title}>Bienvenue sur votre Gestionnaire Financier 💰</h1>
       <p className={styles.text}>Suivez vos finances en toute simplicité.</p>
 
@@ -132,6 +165,8 @@ const Home: React.FC = () => {
           value={montant}
           onChange={(e) => setMontant(e.target.value)}
         />
+        {formErrors.montant && <p style={{ color: "red", marginTop: "-10px" }}>{formErrors.montant}</p>}
+
         <select value={categorie} onChange={(e) => setCategorie(e.target.value)}>
           <option value="">Sélectionner une catégorie</option>
           <option value="Logement">Logement</option>
@@ -142,15 +177,21 @@ const Home: React.FC = () => {
           <option value="Investissements">Investissements</option>
           <option value="Salaire">Salaire</option>
         </select>
+        {formErrors.categorie && <p style={{ color: "red", marginTop: "-10px" }}>{formErrors.categorie}</p>}
+
         <input
           type="text"
           placeholder="Description (ex: iPhone 16)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>\n          <option value="dépense">Dépense</option>
+
+        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>
+          <option value="dépense">Dépense</option>
           <option value="revenue">Revenu</option>
         </select>
+        {formErrors.type && <p style={{ color: "red", marginTop: "-10px" }}>{formErrors.type}</p>}
+
         <button onClick={addTransaction}>Ajouter</button>
         <button className={styles.resetButton} onClick={resetAll}>🔄 Réinitialiser</button>
       </div>

@@ -5,7 +5,7 @@ interface User {
   email: string;
   nom: string;
   prenom: string;
-  objectif:string;
+  objectif: string;
 }
 
 interface AuthContextType {
@@ -39,6 +39,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("utilisateurId");
     setUser(null);
   };
+
+  useEffect(() => {
+    if (!user) return;
+
+    const INACTIVITY_LIMIT = 60 * 1000;
+    let timeout: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        alert("⏱️ Vous avez été déconnecté pour cause d'inactivité.");
+        logout();
+      }, INACTIVITY_LIMIT);
+    };
+
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+    window.addEventListener("click", resetTimer);
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("click", resetTimer);
+    };
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>

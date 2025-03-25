@@ -86,3 +86,18 @@
     background-color: #c82333;
   }
   
+  .popupNotification {
+    position: fixed;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ffe0e0;
+    border: 1px solid #ff5e5e;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+    z-index: 999;
+    font-weight: bold;
+    color: #900;
+  }
+  

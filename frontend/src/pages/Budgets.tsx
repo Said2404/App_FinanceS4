@@ -94,6 +94,16 @@ const Budgets: React.FC = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <div className={styles.container}>
+        <h2 className={styles.title}>📊 Budgets</h2>
+        <p className={styles.text}>Vous devez être connecté pour gérer vos budgets.</p>
+      </div>
+    );
+  }
+  
+
   return (
     <div className={styles.container}>
       {showAlert && (

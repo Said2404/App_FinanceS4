@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import styles from "../styles/Transactions.module.css";
+import { useAuth } from "../context/AuthContext";
 
 interface Transaction {
   transactionId: number;
@@ -17,6 +18,7 @@ const Transactions: React.FC = () => {
   const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"tous" | "dépense" | "revenu">("tous");
+  const { user } = useAuth();
 
   useEffect(() => {
     const utilisateurId = localStorage.getItem("utilisateurId");
@@ -82,6 +84,18 @@ const Transactions: React.FC = () => {
       alert("Erreur lors de la suppression !");
     }
   };
+
+  
+
+if (!user) {
+  return (
+    <div className={styles.container}>
+      <h2 className={styles.title}>🔒 Transactions</h2>
+      <p className={styles.text}>Vous devez être connecté pour voir vos transactions.</p>
+    </div>
+  );
+}
+
 
   return (
     <div className={styles.container}>
