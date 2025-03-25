@@ -68,9 +68,15 @@ export const deleteTransactions = async (req: Request, res: Response) => {
 };
 
 export const resetTransactions = async (req: Request, res: Response) => {
+  const { utilisateurId } = req.body;
+
+  if (!utilisateurId) {
+    return res.status(400).json({ error: "Utilisateur non connecté" });
+  }
+
   try {
-    await db.query("DELETE FROM transactions");
-    res.json({ message: "Toutes les transactions ont été supprimées" });
+    await db.query("DELETE FROM transactions WHERE utilisateurId = ?", [utilisateurId]);
+    res.json({ message: "Les transactions de l'utilisateur ont été supprimées." });
   } catch (err) {
     console.error("❌ Erreur lors de la suppression :", err);
     res.status(500).json({ error: "Erreur lors de la suppression des transactions" });

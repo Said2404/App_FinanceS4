@@ -4,7 +4,9 @@ import StatsChart from "../components/StatsChart";
 import styles from "../styles/Home.module.css";
 import { assignCategoryColor, getCategoryColors } from "../utils/CategoryColors";
 import { useNavigate } from "react-router-dom";
-import budgetSubject from "../observers/BudgetSubject"; 
+import budgetSubject from "../observers/BudgetSubject";
+import { TransactionFactory } from "../services/transactionFactory";
+import SoldeManager from "../services/soldeManager"; // ✅ Singleton
 
 interface Transaction {
   id?: number;
@@ -26,6 +28,7 @@ const Home: React.FC = () => {
   const [categoryColors, setCategoryColors] = useState<{ [key: string]: string }>(getCategoryColors());
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [showPopup, setShowPopup] = useState(false);
+  const [solde, setSolde] = useState<number>(SoldeManager.getInstance().getSolde());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -88,19 +91,23 @@ const Home: React.FC = () => {
 
     if (!utilisateurId) {
       console.error("❌ Aucun utilisateur connecté !");
-      navigate("/connexion"); 
+      navigate("/connexion");
       return;
     }
 
     const normalizedCategory = categorie.toLowerCase().trim();
     const assignedColor = assignCategoryColor(normalizedCategory);
 
+    const createdTransaction = TransactionFactory.createTransaction(
+      parseFloat(montant),
+      normalizedCategory,
+      type === "dépense" ? "Dépense" : "Revenu",
+      description || "N/A"
+    );
+
     const transactionData = {
+      ...createdTransaction,
       utilisateurId: Number(utilisateurId),
-      montant: parseFloat(montant),
-      categorie: normalizedCategory,
-      type: type === "dépense" ? "Dépense" : "Revenu",
-      description: description || "N/A",
       color: assignedColor,
     };
 
@@ -113,6 +120,15 @@ const Home: React.FC = () => {
       setCategorie("");
       setDescription("");
       setFormErrors({});
+
+      // Mise à jour du solde via Singleton
+      const soldeManager = SoldeManager.getInstance();
+      if (type === "revenue") {
+        soldeManager.addMontant(parseFloat(montant));
+      } else {
+        soldeManager.retirerMontant(parseFloat(montant));
+      }
+      setSolde(soldeManager.getSolde());
     } catch (error) {
       console.error("❌ Erreur lors de l'envoi de la transaction :", error);
     }
@@ -120,20 +136,36 @@ const Home: React.FC = () => {
 
   const resetAll = async () => {
     const confirmation = window.confirm("⚠️ Voulez-vous vraiment réinitialiser toutes les transactions ? Cette action est irréversible.");
-
     if (!confirmation) return;
-
+  
+    const utilisateurId = localStorage.getItem("utilisateurId");
+  
+    if (!utilisateurId) {
+      alert("❌ Utilisateur non connecté !");
+      return;
+    }
+  
     try {
-      await axios.delete("http://localhost:5001/api/transactions");
+      await axios.delete("http://localhost:5001/api/transactions", {
+        data: { utilisateurId: Number(utilisateurId) }, // ✅ Envoi dans `data` pour DELETE
+      });
+  
       setDepenses([]);
       setRevenues([]);
       setCategoryColors({});
       localStorage.removeItem("categoryColors");
-      alert("✅ Toutes les transactions ont été supprimées !");
+  
+      // ✅ Réinitialisation du solde avec le Singleton
+      const soldeManager = SoldeManager.getInstance();
+      soldeManager.reset();
+      setSolde(0);
+  
+      alert("✅ Vos transactions ont été supprimées !");
     } catch (error) {
       console.error("❌ Erreur lors de la réinitialisation :", error);
     }
   };
+  
 
   const totaldépenses = dépenses.reduce((sum, e) => sum + (Number(e.montant) || 0), 0);
   const totalRevenues = revenues.reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
@@ -186,7 +218,7 @@ const Home: React.FC = () => {
           onChange={(e) => setDescription(e.target.value)}
         />
 
-        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>
+        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>          
           <option value="dépense">Dépense</option>
           <option value="revenue">Revenu</option>
         </select>
@@ -210,6 +242,7 @@ const Home: React.FC = () => {
           <p className={balance >= 0 ? styles.positiveBalance : styles.negativeBalance}>
             {balance} €
           </p>
+         
         </div>
         <StatsChart
           title="Revenus"
