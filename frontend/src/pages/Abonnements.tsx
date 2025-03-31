@@ -16,16 +16,19 @@ interface Abonnement {
 
 const Abonnements: React.FC = () => {
   const { user } = useAuth();
+
   const [montant, setMontant] = useState("");
-  const [frequence, setFrequence] = useState("mensuel");
   const [description, setDescription] = useState("");
+  const [frequence, setFrequence] = useState("");
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [datePrelevement, setDatePrelevement] = useState("");
+
   const [abonnements, setAbonnements] = useState<Abonnement[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [modeEdition, setModeEdition] = useState(false);
   const [editAbonnement, setEditAbonnement] = useState<Abonnement | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (user) fetchAbonnements();
@@ -43,19 +46,27 @@ const Abonnements: React.FC = () => {
   const resetForm = () => {
     setMontant("");
     setDescription("");
-    setFrequence("mensuel");
+    setFrequence("");
     setDateDebut("");
     setDateFin("");
     setDatePrelevement("");
+    setErrors({});
     setModeEdition(false);
     setEditAbonnement(null);
   };
 
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    if (!montant) newErrors.montant = "Le montant est requis";
+    if (!description) newErrors.description = "Le nom est requis";
+    if (!dateDebut) newErrors.dateDebut = "La date de début est requise";
+    if (!frequence) newErrors.frequence = "La fréquence est requise";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSoumettre = async () => {
-    if (!montant || !description || !dateDebut) {
-      alert("Remplis tous les champs requis");
-      return;
-    }
+    if (!validateForm()) return;
 
     const data = {
       utilisateurId: user?.utilisateurId,
@@ -104,6 +115,15 @@ const Abonnements: React.FC = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <div className={styles.container}>
+        <h2 className={styles.title}>📅 Abonnements</h2>
+        <p className={styles.text}>🔒 Vous devez être connecté pour voir vos abonnements.</p>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <h2 className={styles.title}>📅 Abonnements en cours</h2>
@@ -145,16 +165,19 @@ const Abonnements: React.FC = () => {
             <div className={styles.formGroup}>
               <label>Montant (€)</label>
               <input type="number" value={montant} onChange={(e) => setMontant(e.target.value)} />
+              {errors.montant && <p className={styles.error}>{errors.montant}</p>}
             </div>
 
             <div className={styles.formGroup}>
               <label>Nom</label>
               <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
+              {errors.description && <p className={styles.error}>{errors.description}</p>}
             </div>
 
             <div className={styles.formGroup}>
               <label>Date de début</label>
               <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} />
+              {errors.dateDebut && <p className={styles.error}>{errors.dateDebut}</p>}
             </div>
 
             <div className={styles.formGroup}>
@@ -165,11 +188,13 @@ const Abonnements: React.FC = () => {
             <div className={styles.formGroup}>
               <label>Fréquence</label>
               <select value={frequence} onChange={(e) => setFrequence(e.target.value)}>
+                <option value="">-- Choisir une fréquence --</option>
                 <option value="mensuel">Mensuel</option>
                 <option value="annuel">Annuel</option>
                 <option value="hebdomadaire">Hebdomadaire</option>
                 <option value="personnalise">Personnalisé</option>
               </select>
+              {errors.frequence && <p className={styles.error}>{errors.frequence}</p>}
             </div>
 
             {frequence === "personnalise" && (

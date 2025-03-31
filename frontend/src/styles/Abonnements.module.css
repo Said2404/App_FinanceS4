@@ -148,3 +148,11 @@
   font-weight: bold;
   cursor: pointer;
 }
+
+.error {
+  color: red;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
