@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import StatsChart from "../components/StatsChart";
 import styles from "../styles/Home.module.css";
-import { assignCategoryColor, getCategoryColors } from "../utils/CategoryColors";
 import { useNavigate } from "react-router-dom";
 import budgetSubject from "../observers/BudgetSubject";
 import { TransactionFactory } from "../services/transactionFactory";
-import SoldeManager from "../services/soldeManager"; // ✅ Singleton
+import SoldeManager from "../services/soldeManager";
+import { detectCategoryFromDescription } from "../utils/detectCategory";
+import { CATEGORIES } from "../utils/categories";
+import CategoryColorManager from "../utils/CategoryColors";
 
 interface Transaction {
   id?: number;
@@ -25,10 +27,12 @@ const Home: React.FC = () => {
   const [categorie, setCategorie] = useState("");
   const [type, setType] = useState<"dépense" | "revenue">("dépense");
   const [description, setDescription] = useState("");
-  const [categoryColors, setCategoryColors] = useState<{ [key: string]: string }>(getCategoryColors());
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [showPopup, setShowPopup] = useState(false);
   const [solde, setSolde] = useState<number>(SoldeManager.getInstance().getSolde());
+  const [categoryColors, setCategoryColors] = useState<{ [key: string]: string }>(
+    CategoryColorManager.getInstance().getAllColors()
+  );
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -81,7 +85,18 @@ const Home: React.FC = () => {
   const addTransaction = async () => {
     const errors: { [key: string]: string } = {};
     if (!montant) errors.montant = "❌ Le montant est requis";
-    if (!categorie) errors.categorie = "❌ La catégorie est requise";
+
+    let autoCategory = categorie.toLowerCase().trim();
+    if (!autoCategory) {
+      const detected = detectCategoryFromDescription(description);
+      if (detected) {
+        autoCategory = detected;
+        setCategorie(detected); // Remplit automatiquement le select
+      } else {
+        errors.categorie = "❌ La catégorie est requise ou non reconnue";
+      }
+    }
+
     if (!type) errors.type = "❌ Le type est requis";
 
     setFormErrors(errors);
@@ -95,12 +110,11 @@ const Home: React.FC = () => {
       return;
     }
 
-    const normalizedCategory = categorie.toLowerCase().trim();
-    const assignedColor = assignCategoryColor(normalizedCategory);
+    const color = CategoryColorManager.getInstance().getColor(autoCategory);
 
     const createdTransaction = TransactionFactory.createTransaction(
       parseFloat(montant),
-      normalizedCategory,
+      autoCategory,
       type === "dépense" ? "Dépense" : "Revenu",
       description || "N/A"
     );
@@ -108,10 +122,8 @@ const Home: React.FC = () => {
     const transactionData = {
       ...createdTransaction,
       utilisateurId: Number(utilisateurId),
-      color: assignedColor,
+      color,
     };
-
-    console.log("📩 Données envoyées :", transactionData);
 
     try {
       await axios.post("http://localhost:5001/api/transactions", transactionData);
@@ -121,7 +133,6 @@ const Home: React.FC = () => {
       setDescription("");
       setFormErrors({});
 
-      // Mise à jour du solde via Singleton
       const soldeManager = SoldeManager.getInstance();
       if (type === "revenue") {
         soldeManager.addMontant(parseFloat(montant));
@@ -129,6 +140,9 @@ const Home: React.FC = () => {
         soldeManager.retirerMontant(parseFloat(montant));
       }
       setSolde(soldeManager.getSolde());
+
+      // MAJ des couleurs affichées
+      setCategoryColors(CategoryColorManager.getInstance().getAllColors());
     } catch (error) {
       console.error("❌ Erreur lors de l'envoi de la transaction :", error);
     }
@@ -137,35 +151,33 @@ const Home: React.FC = () => {
   const resetAll = async () => {
     const confirmation = window.confirm("⚠️ Voulez-vous vraiment réinitialiser toutes les transactions ? Cette action est irréversible.");
     if (!confirmation) return;
-  
+
     const utilisateurId = localStorage.getItem("utilisateurId");
-  
+
     if (!utilisateurId) {
       alert("❌ Utilisateur non connecté !");
       return;
     }
-  
+
     try {
       await axios.delete("http://localhost:5001/api/transactions", {
-        data: { utilisateurId: Number(utilisateurId) }, // ✅ Envoi dans `data` pour DELETE
+        data: { utilisateurId: Number(utilisateurId) },
       });
-  
+
       setDepenses([]);
       setRevenues([]);
+      CategoryColorManager.getInstance().resetColors();
       setCategoryColors({});
-      localStorage.removeItem("categoryColors");
-  
-      // ✅ Réinitialisation du solde avec le Singleton
+
       const soldeManager = SoldeManager.getInstance();
       soldeManager.reset();
       setSolde(0);
-  
+
       alert("✅ Vos transactions ont été supprimées !");
     } catch (error) {
       console.error("❌ Erreur lors de la réinitialisation :", error);
     }
   };
-  
 
   const totaldépenses = dépenses.reduce((sum, e) => sum + (Number(e.montant) || 0), 0);
   const totalRevenues = revenues.reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
@@ -201,13 +213,11 @@ const Home: React.FC = () => {
 
         <select value={categorie} onChange={(e) => setCategorie(e.target.value)}>
           <option value="">Sélectionner une catégorie</option>
-          <option value="Logement">Logement</option>
-          <option value="Transport">Transport</option>
-          <option value="Alimentation">Alimentation</option>
-          <option value="Shopping">Shopping</option>
-          <option value="Loisirs">Loisirs</option>
-          <option value="Investissements">Investissements</option>
-          <option value="Salaire">Salaire</option>
+          {CATEGORIES.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            </option>
+          ))}
         </select>
         {formErrors.categorie && <p style={{ color: "red", marginTop: "-10px" }}>{formErrors.categorie}</p>}
 
@@ -218,7 +228,7 @@ const Home: React.FC = () => {
           onChange={(e) => setDescription(e.target.value)}
         />
 
-        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>          
+        <select value={type} onChange={(e) => setType(e.target.value as "dépense" | "revenue")}>
           <option value="dépense">Dépense</option>
           <option value="revenue">Revenu</option>
         </select>
@@ -242,7 +252,6 @@ const Home: React.FC = () => {
           <p className={balance >= 0 ? styles.positiveBalance : styles.negativeBalance}>
             {balance} €
           </p>
-         
         </div>
         <StatsChart
           title="Revenus"

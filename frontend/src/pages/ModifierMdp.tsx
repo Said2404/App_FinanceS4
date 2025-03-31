@@ -2,12 +2,15 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import styles from "../styles/Auth.module.css";
+import styles from "../styles/ModifierMdp.module.css";
 
 const ModifierMdp: React.FC = () => {
   const [ancienMdp, setAncienMdp] = useState("");
   const [nouveauMdp, setNouveauMdp] = useState("");
   const [confirmationMdp, setConfirmationMdp] = useState("");
+  const [showAncien, setShowAncien] = useState(false);
+  const [showNouveau, setShowNouveau] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -46,17 +49,48 @@ const ModifierMdp: React.FC = () => {
       <form onSubmit={handleSubmit}>
         <div className={styles.formGroup}>
           <label>Mot de passe actuel</label>
-          <input type="password" value={ancienMdp} onChange={(e) => setAncienMdp(e.target.value)} required />
+          <input
+            type={showAncien ? "text" : "password"}
+            value={ancienMdp}
+            onChange={(e) => setAncienMdp(e.target.value)}
+            required
+            className={styles.input}
+          />
+          <span onClick={() => setShowAncien(!showAncien)} className={styles.toggleIcon}>
+            {showAncien ? "🙈" : "👁️"}
+          </span>
         </div>
+
         <div className={styles.formGroup}>
           <label>Nouveau mot de passe</label>
-          <input type="password" value={nouveauMdp} onChange={(e) => setNouveauMdp(e.target.value)} required />
+          <input
+            type={showNouveau ? "text" : "password"}
+            value={nouveauMdp}
+            onChange={(e) => setNouveauMdp(e.target.value)}
+            required
+            className={styles.input}
+          />
+          <span onClick={() => setShowNouveau(!showNouveau)} className={styles.toggleIcon}>
+            {showNouveau ? "🙈" : "👁️"}
+          </span>
         </div>
+
         <div className={styles.formGroup}>
           <label>Confirmer le nouveau mot de passe</label>
-          <input type="password" value={confirmationMdp} onChange={(e) => setConfirmationMdp(e.target.value)} required />
+          <input
+            type={showConfirmation ? "text" : "password"}
+            value={confirmationMdp}
+            onChange={(e) => setConfirmationMdp(e.target.value)}
+            required
+            className={styles.input}
+          />
+          <span onClick={() => setShowConfirmation(!showConfirmation)} className={styles.toggleIcon}>
+            {showConfirmation ? "🙈" : "👁️"}
+          </span>
         </div>
+
         {errorMessage && <p className={styles.message}>{errorMessage}</p>}
+
         <button type="submit" className={styles.button}>Valider</button>
       </form>
     </div>

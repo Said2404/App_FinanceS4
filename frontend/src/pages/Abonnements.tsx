@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import styles from "../styles/Abonnements.module.css";
+import { getAbonnementIcon } from "../utils/getAbonnementIcon";
 
 interface Abonnement {
   idAbonnement: number;
@@ -13,7 +14,7 @@ interface Abonnement {
   date_prelevement?: string;
 }
 
-const Abonnements = () => {
+const Abonnements: React.FC = () => {
   const { user } = useAuth();
   const [montant, setMontant] = useState("");
   const [frequence, setFrequence] = useState("mensuel");
@@ -21,11 +22,10 @@ const Abonnements = () => {
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [datePrelevement, setDatePrelevement] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
   const [abonnements, setAbonnements] = useState<Abonnement[]>([]);
+  const [showForm, setShowForm] = useState(false);
   const [modeEdition, setModeEdition] = useState(false);
-  const [abonnementEnCoursEdition, setAbonnementEnCoursEdition] = useState<Abonnement | null>(null);
+  const [editAbonnement, setEditAbonnement] = useState<Abonnement | null>(null);
 
   useEffect(() => {
     if (user) fetchAbonnements();
@@ -36,7 +36,7 @@ const Abonnements = () => {
       const response = await axios.get(`http://localhost:5001/api/abonnements?utilisateurId=${user?.utilisateurId}`);
       setAbonnements(response.data);
     } catch (error) {
-      console.error("❌ Erreur lors de la récupération des abonnements :", error);
+      console.error("Erreur de récupération :", error);
     }
   };
 
@@ -48,18 +48,16 @@ const Abonnements = () => {
     setDateFin("");
     setDatePrelevement("");
     setModeEdition(false);
-    setAbonnementEnCoursEdition(null);
-    setSuccessMessage("");
-    setErrorMessage("");
+    setEditAbonnement(null);
   };
 
   const handleSoumettre = async () => {
     if (!montant || !description || !dateDebut) {
-      alert("Veuillez remplir tous les champs obligatoires.");
+      alert("Remplis tous les champs requis");
       return;
     }
 
-    const abonnementData = {
+    const data = {
       utilisateurId: user?.utilisateurId,
       montant: Number(montant),
       description,
@@ -70,130 +68,126 @@ const Abonnements = () => {
     };
 
     try {
-      if (modeEdition && abonnementEnCoursEdition) {
-        await axios.put(`http://localhost:5001/api/abonnements/${abonnementEnCoursEdition.idAbonnement}`, abonnementData);
-        setSuccessMessage("✅ Abonnement modifié avec succès !");
+      if (modeEdition && editAbonnement) {
+        await axios.put(`http://localhost:5001/api/abonnements/${editAbonnement.idAbonnement}`, data);
       } else {
-        await axios.post("http://localhost:5001/api/abonnements", abonnementData);
-        setSuccessMessage("✅ Abonnement ajouté avec succès !");
+        await axios.post("http://localhost:5001/api/abonnements", data);
       }
 
       resetForm();
+      setShowForm(false);
       fetchAbonnements();
     } catch (error) {
-      console.error("❌ Erreur lors de l'enregistrement de l'abonnement :", error);
-      setErrorMessage("Erreur lors de l'enregistrement de l'abonnement.");
-      setSuccessMessage("");
+      console.error("Erreur soumission :", error);
     }
   };
 
-  const handleModifier = (abonnement: Abonnement) => {
+  const handleModifier = (a: Abonnement) => {
+    setShowForm(true);
     setModeEdition(true);
-    setAbonnementEnCoursEdition(abonnement);
-    setMontant(abonnement.montant.toString());
-    setDescription(abonnement.description);
-    setFrequence(abonnement.frequence);
-    setDateDebut(abonnement.date_debut.slice(0, 10));
-    setDateFin(abonnement.date_fin?.slice(0, 10) || "");
-    setDatePrelevement(abonnement.date_prelevement?.slice(0, 10) || "");
+    setEditAbonnement(a);
+    setMontant(a.montant.toString());
+    setDescription(a.description);
+    setFrequence(a.frequence);
+    setDateDebut(a.date_debut.slice(0, 10));
+    setDateFin(a.date_fin?.slice(0, 10) || "");
+    setDatePrelevement(a.date_prelevement?.slice(0, 10) || "");
   };
 
   const handleSupprimer = async (id: number) => {
-    const confirm = window.confirm("⚠️ Voulez-vous vraiment supprimer cet abonnement ?");
-    if (!confirm) return;
-
+    if (!window.confirm("Supprimer cet abonnement ?")) return;
     try {
       await axios.delete(`http://localhost:5001/api/abonnements/${id}`);
-      setAbonnements((prev) => prev.filter((a) => a.idAbonnement !== id));
+      fetchAbonnements();
     } catch (error) {
-      console.error("❌ Erreur lors de la suppression :", error);
+      console.error("Erreur suppression :", error);
     }
   };
 
-  if (!user) {
-    return (
-      <div className={styles.container}>
-        <h2 className={styles.title}>📅 Abonnements</h2>
-        <p className={styles.text}>Vous devez être connecté pour gérer vos abonnements.</p>
-      </div>
-    );
-  }
-
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>📅 Abonnements</h2>
-      <p className={styles.text}>Ajoutez un abonnement récurrent.</p>
+      <h2 className={styles.title}>📅 Abonnements en cours</h2>
 
-      <div>
-        <div className={styles.formGroup}>
-          <label>Montant (€):</label>
-          <input type="number" value={montant} onChange={(e) => setMontant(e.target.value)} required />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Nom de l'abonnement:</label>
-          <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} required />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Date de début:</label>
-          <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} required />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Date de fin (facultatif):</label>
-          <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label>Fréquence de prélèvement:</label>
-          <select value={frequence} onChange={(e) => setFrequence(e.target.value)}>
-            <option value="mensuel">Mensuel</option>
-            <option value="annuel">Annuel</option>
-            <option value="hebdomadaire">Hebdomadaire</option>
-            <option value="personnalise">Personnalisé</option>
-          </select>
-        </div>
-
-        {frequence === "personnalise" && (
-          <div className={styles.formGroup}>
-            <label>Date de prélèvement personnalisé:</label>
-            <input type="date" value={datePrelevement} onChange={(e) => setDatePrelevement(e.target.value)} required />
-          </div>
-        )}
-
-        <button className={styles.buttonAdd} onClick={handleSoumettre}>
-          {modeEdition ? "💾 Enregistrer les modifications" : "➕ Ajouter l'abonnement"}
-        </button>
-
-        {successMessage && <div className={styles.successMessage}>{successMessage}</div>}
-        {errorMessage && <div className={styles.errorMessage}>{errorMessage}</div>}
-      </div>
-
-      <div className={styles.abonnementsEnCours}>
-        <h3>📌 Abonnements en cours :</h3>
+      <div className={styles.abonnementsList}>
         {abonnements.length === 0 ? (
-          <p>Aucun abonnement enregistré.</p>
+          <p>Aucun abonnement pour le moment.</p>
         ) : (
-          <ul className={styles.abonnementList}>
-            {abonnements.map((a) => (
-              <li key={a.idAbonnement} className={styles.abonnementCard}>
-                <p><strong>{a.description}</strong></p>
-                <p>Montant : {Number(a.montant).toFixed(2)} €</p>
-                <p>Fréquence : {a.frequence}</p>
-                <p>Début : {new Date(a.date_debut).toLocaleDateString("fr-FR")}</p>
-                {a.date_fin && <p>Fin : {new Date(a.date_fin).toLocaleDateString("fr-FR")}</p>}
-                {a.date_prelevement && <p>Prélèvement : {new Date(a.date_prelevement).toLocaleDateString("fr-FR")}</p>}
-
-                <div className={styles.actionButtons}>
-                  <button className={styles.modifyButton} onClick={() => handleModifier(a)}>✏️ Modifier</button>
-                  <button className={styles.deleteButton} onClick={() => handleSupprimer(a.idAbonnement)}>❌ Supprimer</button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          abonnements.map((a) => (
+            <div key={a.idAbonnement} className={styles.abonnementCard}>
+              <div className={styles.abonnementHeader}>
+                <img
+                  src={getAbonnementIcon(a.description) || ""}
+                  alt={a.description}
+                  className={styles.abonnementIcon}
+                />
+                <strong>{a.description}</strong>
+              </div>
+              <p>Montant : {Number(a.montant).toFixed(2)} €</p>
+              <p>Fréquence : {a.frequence}</p>
+              <p>Début : {new Date(a.date_debut).toLocaleDateString("fr-FR")}</p>
+              {a.date_fin && <p>Fin : {new Date(a.date_fin).toLocaleDateString("fr-FR")}</p>}
+              <div className={styles.actionButtons}>
+                <button onClick={() => handleModifier(a)} className={styles.modifyButton}>✏️</button>
+                <button onClick={() => handleSupprimer(a.idAbonnement)} className={styles.deleteButton}>❌</button>
+              </div>
+            </div>
+          ))
         )}
       </div>
+
+      <button className={styles.addButton} onClick={() => setShowForm(true)}>➕ Ajouter un abonnement</button>
+
+      {showForm && (
+        <div className={styles.popupOverlay}>
+          <div className={styles.popup}>
+            <h3>{modeEdition ? "Modifier l’abonnement" : "Ajouter un abonnement"}</h3>
+
+            <div className={styles.formGroup}>
+              <label>Montant (€)</label>
+              <input type="number" value={montant} onChange={(e) => setMontant(e.target.value)} />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Nom</label>
+              <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Date de début</label>
+              <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Date de fin</label>
+              <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Fréquence</label>
+              <select value={frequence} onChange={(e) => setFrequence(e.target.value)}>
+                <option value="mensuel">Mensuel</option>
+                <option value="annuel">Annuel</option>
+                <option value="hebdomadaire">Hebdomadaire</option>
+                <option value="personnalise">Personnalisé</option>
+              </select>
+            </div>
+
+            {frequence === "personnalise" && (
+              <div className={styles.formGroup}>
+                <label>Date de prélèvement</label>
+                <input type="date" value={datePrelevement} onChange={(e) => setDatePrelevement(e.target.value)} />
+              </div>
+            )}
+
+            <div className={styles.popupActions}>
+              <button onClick={handleSoumettre} className={styles.buttonAdd}>
+                {modeEdition ? "💾 Enregistrer" : "✅ Ajouter"}
+              </button>
+              <button onClick={() => { resetForm(); setShowForm(false); }} className={styles.cancelButton}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
